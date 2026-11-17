@@ -1,0 +1,38 @@
+{
+ "schema_version": "1.1",
+ "generated_at": "2026-11-17",
+ "synthetic": true,
+ "disclaimer": "가상 환자 · 미리 계산된 결과 · 연구용 (진단 대체 불가) · 점수는 보정 전 상대 위험 점수",
+ "models": {
+  "vital": "바이탈 에이전트 v3 (2층 LSTM + attention, 8피처 × 24행)",
+  "emr": "EMR 에이전트 (PubMedBERT 전체 미세조정, 영문 스냅샷 문서 입력)",
+  "fusion": "합동 심문 (3토큰 [CLS, vital, emr] self-attention, seed 1)",
+  "physician": "책임 의사 모듈 (규칙 플래그: lab 5종 · qSOFA 2항목, SOFA 점수·감염 의심은 계산하지 않음)"
+ },
+ "thresholds": {
+  "high": 0.61,
+  "moderate": 0.39,
+  "agent": {
+   "vital": {
+    "high": 0.6798,
+    "moderate": 0.5886
+   },
+   "emr": {
+    "high": 0.133,
+    "moderate": 0.0567
+   }
+  }
+ },
+ "horizon_hours": 4,
+ "conventions": {
+  "score_display": "fusion_score × 100 을 정수로 '위험 점수' 로 표시 (% 아님)",
+  "conflict": "한 에이전트 HIGH + 다른 에이전트 LOW (각자 기준으로 등급화)",
+  "agent_dependency": "융합 CLS attention 중 vital·emr 비율 (합 1). '근거 참고 비율' 로 표현, 기여도로 단정하지 않기",
+  "emr_section_effect": "해당 섹션을 문서에서 뺐을 때의 EMR 점수 변화. 음수 = 그 섹션이 점수를 올리고 있었음 (판단을 이끈 근거). null = 섹션 없음 또는 미계산",
+  "vital_window": "직전 24개 측정 칸 (h = 시점 T 기준 상대 시간, 앞쪽 null = 기록 없음). vital_attention 과 같은 순서",
+  "inputs_time": "모든 시간은 ICU 입실 후 경과 시간(시간 단위). 시점 T 에서는 t ≤ T 인 측정과, 결과 저장 시각(t_result / t_report) ≤ T 인 검사·영상만 쓰임"
+ },
+ "removed_from_v1": [
+  "scenarios (what-if 화면 없음)"
+ ]
+}

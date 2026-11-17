@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SepsisGuard 시연 대시보드</title>
+<meta name="description" content="SepsisGuard 판단 과정과 의료진 리포트 시연 (가상 환자 · 미리 계산된 결과 · 연구용)">
+<link rel="stylesheet" href="assets/css/style.css?v=1">
+</head>
+<body>
+<header class="top" id="top">
+  <div class="notice" id="notice" role="note"></div>
+  <div class="brand-row">
+    <div class="brand"><span class="logo" aria-hidden="true">◆</span> SepsisGuard <span class="sub">판단 과정 · 의료진 리포트 시연</span></div>
+    <nav class="tabs" role="tablist" aria-label="화면 선택">
+      <button role="tab" data-tab="ward">🏥 병동 현황</button>
+      <button role="tab" data-tab="process">🔍 판단 과정</button>
+      <button role="tab" data-tab="report">📋 의료진 리포트</button>
+      <button role="tab" data-tab="about">ℹ️ 시스템 소개</button>
+    </nav>
+  </div>
+  <div class="ctx" id="ctx">
+    <div class="ctx-patients" id="ctxPatients" aria-label="환자 선택"></div>
+    <div class="ctx-time">
+      <button class="step" id="tPrev" aria-label="한 시간 전">◀</button>
+      <input type="range" id="tSlider" aria-label="시점 선택">
+      <button class="step" id="tNext" aria-label="한 시간 후">▶</button>
+      <div class="t-label" id="tLabel"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section id="tab-ward" class="tab" hidden></section>
+  <section id="tab-process" class="tab" hidden></section>
+  <section id="tab-report" class="tab" hidden></section>
+  <section id="tab-about" class="tab" hidden></section>
+</main>
+
+<footer class="foot" id="foot"></footer>
+
+<script src="assets/vendor/marked.min.js"></script>
+<script src="data/data.js?v=1.1"></script>
+<script src="assets/js/app.js?v=1"></script>
+</body>
+</html>
