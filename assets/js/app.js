@@ -16,7 +16,7 @@
   var TIER_LABEL = { HIGH: "고위험", MODERATE: "중간위험", LOW: "저위험" };
   var TIER_ACTION = { HIGH: "책임의사 즉시 확인", MODERATE: "관찰 목록", LOW: "일상 모니터링" };
   var TIER_COLOR = { HIGH: "#e5484d", MODERATE: "#f5a623", LOW: "#30a46c" };
-  var VITAL_COLOR = "#6366f1", EMR_COLOR = "#0ea5e9";
+  var VITAL_COLOR = "#6366f1", EMR_COLOR = "#0ea5e9", CULT_COLOR = "#a855f7";
   var STATUS_LABEL = { ack: "확인함", watch: "관찰 목록", dismiss: "기각" };
 
   // ── 상태 (브라우저 메모리에만 유지, 새로고침 시 초기화) ──
@@ -212,10 +212,10 @@
   function inputState(t0, t1, T) { return t1 <= T ? "used" : (t0 <= T ? "pending" : "future"); }
   function inputSVG(p, T, W) {
     var ts = times(p.id);
-    var H = 150, L = 58, R = 14, TOP = 18, B = 24;
+    var H = 186, L = 58, R = 14, TOP = 18, B = 24;
     var xmax = Math.max(ts[ts.length - 1], 1), xmin = 0;
     function x(t) { return L + (t - xmin) / (xmax - xmin) * (W - L - R); }
-    var rows = { v: 44, l: 84, i: 120 };
+    var rows = { v: 44, l: 84, c: 120, i: 156 };
     var USED = "#0f766e", PEND = TIER_COLOR.MODERATE, FUT = "var(--unknown)";
     var o = '<svg viewBox="0 0 ' + W + " " + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="시점 T 기준 입력 시간축">';
     // T 이후: 아직 모르는 정보
@@ -223,7 +223,7 @@
       o += '<rect x="' + x(T) + '" y="' + (TOP - 6) + '" width="' + (x(xmax) - x(T) + 4) + '" height="' + (H - TOP - B + 10) + '" fill="var(--unknown-bg)"/>';
       o += '<text x="' + ((x(T) + x(xmax)) / 2) + '" y="' + (TOP + 2) + '" font-size="11" text-anchor="middle">아직 모르는 정보</text>';
     }
-    [["바이탈", rows.v], ["검사", rows.l], ["영상", rows.i]].forEach(function (r) {
+    [["바이탈", rows.v], ["검사", rows.l], ["배양", rows.c], ["영상", rows.i]].forEach(function (r) {
       o += '<text x="8" y="' + (r[1] + 4) + '" font-size="12" style="font-weight:700;fill:var(--text)">' + r[0] + "</text>";
       o += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + r[1] + '" y2="' + r[1] + '" stroke="var(--line)"/>';
     });
@@ -243,6 +243,32 @@
       o += '<circle cx="' + x(g.t_drawn) + '" cy="' + rows.l + '" r="4" fill="var(--panel)" stroke="' + col + '" stroke-width="2"/>';
       o += '<rect x="' + (x(g.t_result) - 5) + '" y="' + (rows.l - 5) + '" width="10" height="10" transform="rotate(45 ' + x(g.t_result) + " " + rows.l + ')" fill="' + (st === "pending" ? "var(--panel)" : col) + '" stroke="' + col + '" stroke-width="2"/>';
       if (st === "pending") o += '<text x="' + x(g.t_result) + '" y="' + (rows.l - 10) + '" font-size="10.5" text-anchor="middle" style="fill:' + PEND + ';font-weight:700">결과 대기</text>';
+      o += "</g>";
+    });
+    // 배양 (채취 → 결과 저장). 채취 사실은 채취 시점부터 판단에 쓰이고, 균 결과는 결과 저장 후부터 쓰임
+    ((p.inputs && p.inputs.cultures) || []).forEach(function (c, ci) {
+      var res0 = cultRes(c);
+      if (c.t_collected < xmin) {   // 입실 전 채취 (예: 병동에서 채취 후 ICU 전동)
+        var inWin = T - c.t_collected <= 72, done0 = c.t_resulted != null && c.t_resulted <= T, col0 = inWin ? CULT_COLOR : FUT;
+        var tip0 = "입실 전 배양 채취 (" + fmt(c.t_collected, 1) + "h) · " + c.specimen + (done0 ? " → 결과 " + fmt(c.t_resulted, 1) + "h: " + res0 : " · 결과 대기") +
+          (inWin ? " · 최근 72h 안이라 판단에 사용" : " · 72h 이전 기록이라 이 시점 판단에는 쓰이지 않음");
+        o += '<g><title>' + esc(tip0) + '</title><path d="M' + (x(xmin) + 1) + " " + rows.c + " l8 -6 v12 z" + '" fill="' + col0 + '"/>' +
+          '<text x="' + (x(xmin) + 13) + '" y="' + (rows.c + 4) + '" font-size="10.5" style="fill:' + col0 + ';font-weight:700">입실 전 배양 ' + fmt(c.t_collected, 0) + "h · " + esc(done0 ? res0 : "결과 대기") + (inWin ? "" : " (72h 밖)") + "</text></g>";
+        return;
+      }
+      if (c.t_collected > T) {
+        o += '<g><title>' + esc("배양 채취 " + fmt(c.t_collected, 1) + "h · " + c.specimen + " · T 이후") + '</title><circle cx="' + x(c.t_collected) + '" cy="' + rows.c + '" r="4" fill="var(--panel)" stroke="' + FUT + '" stroke-width="2"/></g>';
+        return;
+      }
+      var done = c.t_resulted != null && c.t_resulted <= T;
+      var end = done ? c.t_resulted : (c.t_resulted != null ? Math.min(c.t_resulted, T) : T);
+      var res = cultRes(c);
+      var tip = "배양 채취 " + fmt(c.t_collected, 1) + "h · " + c.specimen + (done ? " → 결과 저장 " + fmt(c.t_resulted, 1) + "h: " + res + " · 판단에 사용" : " · 결과 대기 (채취 사실만 판단에 사용)");
+      var yy = rows.c + (ci % 2 ? 5 : -5);
+      o += '<g><title>' + esc(tip) + "</title>";
+      o += '<line x1="' + x(c.t_collected) + '" x2="' + x(end) + '" y1="' + yy + '" y2="' + yy + '" stroke="' + CULT_COLOR + '" stroke-width="3"' + (done ? "" : ' stroke-dasharray="3 2"') + "/>";
+      o += '<circle cx="' + x(c.t_collected) + '" cy="' + yy + '" r="4" fill="var(--panel)" stroke="' + CULT_COLOR + '" stroke-width="2"/>';
+      if (done) o += '<rect x="' + (x(c.t_resulted) - 5) + '" y="' + (yy - 5) + '" width="10" height="10" transform="rotate(45 ' + x(c.t_resulted) + " " + yy + ')" fill="' + CULT_COLOR + '" stroke="' + CULT_COLOR + '" stroke-width="2"/>';
       o += "</g>";
     });
     // 영상 (촬영 → 판독 저장)
@@ -272,9 +298,11 @@
     var imgs = ((p.inputs && p.inputs.imaging) || []);
     var imgUsed = imgs.filter(function (i) { return i.t_report <= T; });
     var imgPend = imgs.filter(function (i) { return i.t_exam <= T && i.t_report > T; });
+    var culUsed = ((p.inputs && p.inputs.cultures) || []).filter(function (c) { return c.t_collected <= T && T - c.t_collected <= 72; });
     var o = '<div class="io-sum">' +
       "<div>바이탈 측정 <b>" + vit + "</b>회<br><span class='faint small'>T 까지 기록된 값</span></div>" +
       "<div>검사 결과 <b>" + used.length + "</b>회분 <span class='faint small'>(" + used.reduce(function (a, g) { return a + g.items.length; }, 0) + "항목)</span><br><span class='faint small'>결과 저장 시각 ≤ T 인 것만</span></div>" +
+      "<div>배양 <b>" + culUsed.length + "</b>건 <span class='faint small'>(결과 " + culUsed.filter(function (c) { return c.t_resulted != null && c.t_resulted <= T; }).length + "건 · 대기 " + culUsed.filter(function (c) { return !(c.t_resulted != null && c.t_resulted <= T); }).length + "건)</span><br><span class='faint small'>최근 72h 채취 · 균 결과는 저장 후부터</span></div>" +
       "<div>영상 판독 <b>" + imgUsed.length + "</b>건<br><span class='faint small'>판독 저장 시각 ≤ T 인 것만</span></div></div>";
     pend.forEach(function (g) {
       o += '<div class="pending-box">⏳ <b>결과 대기</b> · ' + fmt(g.t_drawn, 1) + "h 채혈 " + g.items.length + "항목 (" + esc(g.items.map(function (i) { return i.name; }).join(", ")) +
@@ -381,9 +409,9 @@
   }
   function sectionEffectHTML(r, p) {
     var se = r.emr_section_effect;
-    var rows = [["labs", "검사"], ["imaging", "영상"]].filter(function (k) { return se && se[k[0]] != null; });
+    var rows = [["labs", "검사"], ["cultures", "배양"], ["imaging", "영상"]].filter(function (k) { return se && se[k[0]] != null; });
     if (!rows.length) {
-      var note = se ? "이 시점 문서에는 계산할 섹션(검사·영상)이 없습니다." : "섹션 기여도는 각 환자의 기본 시점(" + p.default_t + "h)에서만 계산되어 있습니다.";
+      var note = se ? "이 시점 문서에는 계산할 섹션(검사·배양·영상)이 없습니다." : "섹션 기여도는 각 환자의 기본 시점(" + p.default_t + "h)에서만 계산되어 있습니다.";
       var btn = (!se && p.default_t !== curT()) ? ' <button class="btn" data-goto-t="' + p.default_t + '" style="padding:2px 10px;font-size:12.5px">' + p.default_t + "h 로 이동</button>" : "";
       return '<div class="small muted">' + note + btn + "</div>";
     }
@@ -453,7 +481,7 @@
     // ①
     h += '<div class="card stage full"><div class="stage-head"><span class="stage-no">1</span><h3>시점 T 의 입력</h3><span class="what">T 이전에 저장된 정보만 사용 · 미래 정보 차단</span></div>' +
       '<div class="chart-wrap" id="inputChart"></div>' +
-      '<div class="io-legend"><span><i style="background:' + VITAL_COLOR + '"></i>바이탈 측정</span><span><i style="background:#0f766e"></i>검사 (○ 채혈 → ◆ 결과 저장)</span><span><i style="background:' + EMR_COLOR + '"></i>영상 (○ 촬영 → ◆ 판독 저장)</span><span><i style="background:' + TIER_COLOR.MODERATE + '"></i>결과 대기 (사용 안 함)</span><span><i style="background:var(--unknown)"></i>T 이후 · 아직 모르는 정보</span></div>' +
+      '<div class="io-legend"><span><i style="background:' + VITAL_COLOR + '"></i>바이탈 측정</span><span><i style="background:#0f766e"></i>검사 (○ 채혈 → ◆ 결과 저장)</span><span><i style="background:' + CULT_COLOR + '"></i>배양 (○ 채취 → ◆ 결과 저장, 점선 = 결과 대기)</span><span><i style="background:' + EMR_COLOR + '"></i>영상 (○ 촬영 → ◆ 판독 저장)</span><span><i style="background:' + TIER_COLOR.MODERATE + '"></i>결과 대기 (사용 안 함)</span><span><i style="background:var(--unknown)"></i>T 이후 · 아직 모르는 정보</span></div>' +
       inputSummary(p, T) + "</div>";
     h += '<div class="arrow-down">▼ 같은 시점 T 의 입력이 두 에이전트에 각각 들어갑니다 ▼</div>';
     // ②
@@ -465,7 +493,7 @@
       '<div class="att-strip" style="margin-top:10px"><div class="small muted">시간대별 attention (결정적 시간대 강조)</div>' + attStrip(r) + attLabels(r) + "</div>" +
       '<div class="explain">결정적 시간대 (attention 상위): <b>' + vitalTopText(r) + "</b></div></div>";
     // ③
-    h += '<div class="card stage emr"><div class="stage-head"><span class="stage-no">3</span><h3>EMR 에이전트</h3><span class="what">검사·영상을 영문 문서 한 장으로 만들어 의료 언어모델이 읽음</span>' +
+    h += '<div class="card stage emr"><div class="stage-head"><span class="stage-no">3</span><h3>EMR 에이전트</h3><span class="what">검사·배양·영상을 영문 문서 한 장으로 만들어 의료 언어모델이 읽음</span>' +
       '<span class="right">' + pill(r.emr_tier) + "</span></div>" +
       '<div class="agent-score"><span class="n num">' + fmt(r.emr_score, 3) + '</span><span class="small muted">EMR 점수 · ' + agentThText("emr") + "</span></div>" +
       '<div class="small muted" style="margin:8px 0 6px">모델에 실제로 들어간 문서 (가상) · <span class="c-HIGH">빨강 = HIGH</span> · <span style="color:var(--lo-mark)">파랑 = LOW</span></div>' +
@@ -526,6 +554,19 @@
         (rr ? '<span class="rf">정상 ' + rr + "</span>" : "") + '<span class="ct">' + (l.trend ? TR[l.trend] || esc(l.trend) : "") + (l.hours_ago != null ? " · " + fmt(l.hours_ago) + "h 전" : "") + "</span></div>";
     }).join("");
   }
+  function cultRes(c) {   // 화면 표시용 결과 문구 (모델 입력 문서는 영문 그대로)
+    if (c.organisms) return c.organisms;
+    var m = String(c.comment || "");
+    if (/no growth/i.test(m)) return "균 자람 없음";
+    if (/no mrsa/i.test(m)) return "MRSA 음성";
+    return m || "균 보고 없음";
+  }
+  function culturesHTML(r) {
+    return (r.cultures || []).map(function (c) {
+      var res = c.status === "pending" ? "결과 대기" : (c.organisms || "균 보고 없음");
+      return '<div class="labrow"><span class="nm" style="color:' + CULT_COLOR + '">◆ 배양 ' + esc(c.spec_type_desc) + "</span><span>" + esc(res) + '</span><span class="ct">' + fmt(c.hours_ago) + "h 전 채취</span></div>";
+    }).join("");
+  }
   function gaugeHTML(r) {
     var s = scoreInt(r.fusion_score), col = TIER_COLOR[r.tier];
     var hi = scoreInt(TH.high), mo = scoreInt(TH.moderate);
@@ -569,7 +610,7 @@
     h += '<div class="card"><h4>에이전트 의존도 · 근거 참고 비율</h4>' + depRowsHTML(r.agent_dependency || {}) + "</div>";
     h += '<div class="card"><h4>바이탈 · 직전 ' + (r.vital_window || []).length + "개 측정 칸 + attention 음영</h4>" + vitalGrid(r, VITAL_FEATS.slice(0, 4).concat([VITAL_FEATS[4]]).concat([VITAL_FEATS[7]])) +
       '<div class="small muted" style="margin-top:8px">결정적 시간대: <b>' + vitalTopText(r) + "</b></div></div>";
-    h += '<div class="card"><h4>이상 검사 · EMR 근거</h4>' + labsHTML(r, p) +
+    h += '<div class="card"><h4>이상 검사 · EMR 근거</h4>' + labsHTML(r, p) + culturesHTML(r) +
       ((r.imaging && r.imaging.hours_ago != null) ? '<div class="labrow"><span class="nm" style="color:var(--emr)">◆ 영상 판독</span><span>있음</span><span class="ct">' + fmt(r.imaging.hours_ago) + "h 전 촬영</span></div>" : "") +
       '<h4 style="margin:14px 0 6px">EMR 섹션 기여도</h4>' + sectionEffectHTML(r, p) + "</div>";
     h += '<div class="card"><h4>Sepsis-3 관련 지표 대조 (규칙 모듈)</h4>' + ruleHTML(r.guideline) + "</div>";
@@ -649,7 +690,7 @@
     var models = META.models || {};
     var h = '<div class="tab-head"><h2>시스템 소개</h2><p>SepsisGuard 가 시점 T 의 정보로 ' + HORIZON + "시간 이내 패혈증 발병 위험을 판단하고 리포트를 만드는 구조입니다.</p></div>";
     h += '<div class="card"><h4>구조</h4><div class="arch">' +
-      '<div class="col"><div class="box"><b>시점 T 의 입력</b><span>T 이전에 저장된 바이탈·검사·영상</span></div></div><div class="ar">→</div>' +
+      '<div class="col"><div class="box"><b>시점 T 의 입력</b><span>T 이전에 저장된 바이탈·검사·배양·영상</span></div></div><div class="ar">→</div>' +
       '<div class="col"><div class="box vital"><b>바이탈 에이전트</b><span>' + esc(models.vital || "시계열 모델") + '</span></div><div class="box emr"><b>EMR 에이전트</b><span>' + esc(models.emr || "의료 언어모델") + "</span></div></div><div class=\"ar\">→</div>" +
       '<div class="col"><div class="box joint"><b>합동 심문</b><span>' + esc(models.fusion || "cross-attention") + "</span></div></div><div class=\"ar\">→</div>" +
       '<div class="col"><div class="box rule"><b>책임 의사 모듈</b><span>' + esc(models.physician || "규칙 모듈") + "</span></div></div><div class=\"ar\">→</div>" +
