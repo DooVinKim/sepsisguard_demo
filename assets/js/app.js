@@ -361,7 +361,7 @@
       var miss = vals.filter(function (v, i) { return w[i] && v == null; }).length;
       return '<div class="vmini"><div class="h"><span>' + f[1] + '</span><b>' + (last == null ? "—" : fmt(last, f[0] === "SI" ? 2 : 1)) + '</b></div>' +
         miniVitalSVG(r, f[0], st) +
-        '<div class="h"><span class="faint">' + esc(f[2]) + "</span><span class='faint'>" + (miss ? "미측정 " + miss + "칸" : "") + "</span></div></div>";
+        '<div class="h"><span class="faint">' + esc(f[2]) + "</span><span class='faint'>" + (miss ? "측정 " + nn.length + "/" + w.filter(function (x) { return x; }).length + "칸" : "") + "</span></div></div>";
     }).join("") + "</div>";
   }
   function attStrip(r) {
@@ -616,7 +616,9 @@
     h += '<div class="card"><h4>Sepsis-3 관련 지표 대조 (규칙 모듈)</h4>' + ruleHTML(r.guideline) + "</div>";
     h += "</div><div>";
     h += actions;
-    h += '<div class="report-pane"><div class="report-label">책임 의사 리포트 · 엔진이 생성한 원문</div>' + renderMd(r.report_md) + "</div>";
+    var mdParts = String(r.report_md || "").split("<!-- details -->");
+    h += '<div class="report-pane"><div class="report-label">책임 의사 리포트 · 엔진이 생성한 원문</div>' + renderMd(mdParts[0]) +
+      (mdParts[1] ? '<details class="doc-details" style="margin-top:10px"><summary>세부 수치 (왼쪽 카드와 같은 근거)</summary>' + renderMd(mdParts[1]) + "</details>" : "") + "</div>";
     h += '<div class="card" style="margin-top:14px"><details class="doc-details"><summary>EMR 에이전트 입력 문서 (가상) — 실제로 모델에 들어간 영문 문서</summary><pre class="doc" style="max-height:none">' + docHTML(r.emr_document) + "</pre></details></div>";
     h += "</div></div>";
     box.innerHTML = h;
