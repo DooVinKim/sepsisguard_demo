@@ -361,7 +361,7 @@
       var miss = vals.filter(function (v, i) { return w[i] && v == null; }).length;
       return '<div class="vmini"><div class="h"><span>' + f[1] + '</span><b>' + (last == null ? "—" : fmt(last, f[0] === "SI" ? 2 : 1)) + '</b></div>' +
         miniVitalSVG(r, f[0], st) +
-        '<div class="h"><span class="faint">' + esc(f[2]) + "</span><span class='faint'>" + (miss ? "측정 " + nn.length + "/" + w.filter(function (x) { return x; }).length + "칸" : "") + "</span></div></div>";
+        '<div class="h"><span class="faint">' + esc(f[2]) + "</span><span class='faint'>" + (miss ? miss + "h 미측정" : "") + "</span></div></div>";
     }).join("") + "</div>";
   }
   function attStrip(r) {
@@ -420,8 +420,8 @@
       var v = se[k[0]], drive = v < 0;
       var w = Math.max(2, Math.abs(v) / mx * 100);
       return '<div class="sect-row ' + (drive ? "drive" : "minor") + '"><span class="nm">' + k[1] + '</span><div class="bar"><span style="width:' + w + "%;background:" + (drive ? TIER_COLOR.HIGH : "var(--faint)") + '"></span></div>' +
-        '<span class="txt num">' + (drive ? "점수를 올린 근거 · 빼면 " + signed(v) : "빼면 " + signed(v)) + "</span></div>";
-    }).join("") + '<div class="small faint" style="margin-top:4px">섹션을 문서에서 빼고 다시 읽었을 때의 EMR 점수 변화. 음수(빼면 내려감) = 그 섹션이 점수를 올리고 있었음.</div>';
+        '<span class="txt num">' + signed(-v) + "</span></div>";
+    }).join("");
   }
 
   // ── ④ 합동 심문 해석 ──
@@ -574,12 +574,12 @@
       '<div class="gauge"><div class="gauge-track"><div class="gauge-fill" style="width:' + s + "%;background:" + col + '"></div></div>' +
       '<div class="gauge-tick" style="left:' + mo + '%"><span>중간 ' + mo + "</span></div>" +
       '<div class="gauge-tick" style="left:' + hi + '%"><span>고위험 ' + hi + "</span></div></div>" +
-      '<div class="small muted" style="margin-top:6px">' + HORIZON + "시간 이내 패혈증 발병 위험 (합동 심문) · 0–100 상대 점수, 확률 아님</div>";
+      '<div class="small muted" style="margin-top:6px">' + HORIZON + "시간 이내 패혈증 발병 위험 (합동 심문)</div>";
   }
   function depRowsHTML(dep) {
     return [["바이탈", dep.vital || 0, VITAL_COLOR], ["EMR", dep.emr || 0, EMR_COLOR]].map(function (a) {
       return '<div class="dep-row"><span class="lab">' + a[0] + '</span><div class="dep-bar"><span style="width:' + Math.round(a[1] * 100) + "%;background:" + a[2] + '"></span></div><span class="val">' + Math.round(a[1] * 100) + "%</span></div>";
-    }).join("") + '<div class="small faint">합동 심문이 각 에이전트 근거를 참고한 비율 (인과적 기여도 아님)</div>';
+    }).join("") + '<div class="small faint">합동 심문이 각 에이전트 근거를 참고한 비율</div>';
   }
   function renderReport() {
     var p = PMAP[state.pid], T = curT(), r = cur();
