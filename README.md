@@ -5,6 +5,21 @@
 SepsisGuard 가 **어떻게 판단하는지** (바이탈 에이전트 · EMR 에이전트 → 합동 심문 → 책임 의사 모듈 → 판정) 와
 **의료진이 어떤 리포트를 받는지** 를 보여주는 시연 페이지입니다. 모든 환자는 가상 환자이며, 결과는 작성자가 실제 엔진으로 미리 계산해 `data/data.js` 에 넣은 값입니다. 이 페이지는 그 값을 조회해 보여주기만 합니다.
 
+- 🔗 라이브 데모: https://doovinkim.github.io/sepsisguard_demo/
+- 📁 모델·전처리 코드: https://github.com/DooVinKim/sepsisguard_code
+
+## 팀
+
+고려대학교 캡스톤 프로젝트 · **패혈증 골든타임 방어를 위한 합동 심문 멀티 에이전트 시스템**
+
+| 이름 | GitHub |
+|---|---|
+| 김두빈 | [@DooVinKim](https://github.com/DooVinKim) |
+| 노민 |  |
+| 남건우 |  |
+
+최종 성능 (test 70,476 시점): 바이탈 0.726 · EMR 0.752 → **합동 심문 AUROC 0.815**
+
 ## 화면
 
 | 탭 | 내용 |
