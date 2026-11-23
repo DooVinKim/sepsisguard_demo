@@ -16,7 +16,7 @@ SepsisGuard 가 **어떻게 판단하는지** (바이탈 에이전트 · EMR 에
 |---|---|
 | 김두빈 | [@DooVinKim](https://github.com/DooVinKim) |
 | 노민 |  |
-| 남건우 |  |
+| 남건우 | [@Dingul1](https://github.com/Dingul1) |
 
 최종 성능 (test 70,476 시점): 바이탈 0.726 · EMR 0.752 → **합동 심문 AUROC 0.815**
 
